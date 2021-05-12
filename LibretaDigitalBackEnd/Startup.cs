@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -32,6 +33,13 @@ namespace LibretaDigitalBackEnd
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "LibretaDigitalBackEnd", Version = "v1" });
             });
+
+            services.AddDbContextPool<DataAccessLayer.ApplicationDbContext>(options => options
+            .UseMySql(
+                Configuration.GetConnectionString("MariaDbConnectionString"),
+                ServerVersion.AutoDetect(Configuration.GetConnectionString("MariaDbConnectionString"))
+                )
+            );
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
