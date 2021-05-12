@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  libretadigitalbackend:
+    image: ${DOCKER_REGISTRY-}libretadigitalbackend
+    build:
+      context: .
+      dockerfile: LibretaDigitalBackEnd/Dockerfile
+    links:
+      - db
+
+  db:
+    image: mariadb:10.3.9
+    restart: always
+    volumes:
+      - ./mysql/data:/var/lib/mysqlmysql
+    environment:
+      MYSQL_ROOT_PASSWORD: webapi
+      MYSQL_DATABASE: webapi
+      MYSQL_USER: webapi
+      MYSQL_PASSWORD: webapi
+    ports:
+      - 33061:3306
+
+  adminer:
+    image: adminer
+    links:
+      - db
+    restart: always
+    ports:
+      - 9090:8080
