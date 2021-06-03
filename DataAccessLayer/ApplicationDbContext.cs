@@ -15,6 +15,16 @@ namespace DataAccessLayer
         {
         }
 
-        public virtual DbSet<Models.Personas> Personas { get; set; }
+        //protected override void OnModelCreating(ModelBuilder builder)
+        //{
+        //    builder.Entity<Estudiantes>()
+        //        .HasIndex(u => u.Documento)
+        //        .IsUnique();
+        //}
+
+        public virtual DbSet<Personas> Personas { get; set; }
+        public virtual DbSet<Estudiantes> Estudiantes { get; set; }
+        public virtual DbSet<Cursos> Cursos{ get; set; }
+        public virtual DbSet<EstudiantesCursos> EstudiantesCursos { get; set; }
     }
 }

@@ -3,14 +3,16 @@ using System;
 using DataAccessLayer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20210515222234_RmoveUserIdCursos2")]
+    partial class RmoveUserIdCursos2
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -36,17 +38,11 @@ namespace DataAccessLayer.Migrations
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("tinyint(1)");
 
-                    b.Property<string>("Foto")
-                        .HasColumnType("LONGTEXT");
-
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("tinyint(1)");
 
                     b.Property<DateTimeOffset?>("LockoutEnd")
                         .HasColumnType("datetime(6)");
-
-                    b.Property<string>("Nombre")
-                        .HasColumnType("longtext");
 
                     b.Property<string>("NormalizedEmail")
                         .HasMaxLength(256)
@@ -139,27 +135,6 @@ namespace DataAccessLayer.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Estudiantes");
-                });
-
-            modelBuilder.Entity("DataAccessLayer.Models.EstudiantesCursos", b =>
-                {
-                    b.Property<long>("id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    b.Property<long>("CursosId")
-                        .HasColumnType("bigint");
-
-                    b.Property<long>("EstudiantesId")
-                        .HasColumnType("bigint");
-
-                    b.HasKey("id");
-
-                    b.HasIndex("CursosId");
-
-                    b.HasIndex("EstudiantesId");
-
-                    b.ToTable("EstudiantesCursos");
                 });
 
             modelBuilder.Entity("DataAccessLayer.Models.Personas", b =>
@@ -326,25 +301,6 @@ namespace DataAccessLayer.Migrations
                         .HasForeignKey("DocenteId");
 
                     b.Navigation("Docente");
-                });
-
-            modelBuilder.Entity("DataAccessLayer.Models.EstudiantesCursos", b =>
-                {
-                    b.HasOne("DataAccessLayer.Models.Cursos", "Curso")
-                        .WithMany()
-                        .HasForeignKey("CursosId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("DataAccessLayer.Models.Estudiantes", "Estudiante")
-                        .WithMany()
-                        .HasForeignKey("EstudiantesId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Curso");
-
-                    b.Navigation("Estudiante");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>

@@ -30,6 +30,7 @@ namespace LibretaDigitalBackEnd
         }
 
         public IConfiguration Configuration { get; }
+        readonly string MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
@@ -68,16 +69,23 @@ namespace LibretaDigitalBackEnd
                 });
             });
 
+            // Obtenemos la connectio string.
+            string dbConnection = Configuration.GetConnectionString("MariaDbConnectionString");
+            bool dev = Convert.ToBoolean(Configuration["IsDevelopment"]);
+            if (!dev)
+                dbConnection = Environment.GetEnvironmentVariable("DbConnection");
+            Console.WriteLine(dbConnection);
+
             // Inject Database Context
             services.AddDbContextPool<ApplicationDbContext>(options => options
             .UseMySql(
-                Configuration.GetConnectionString("MariaDbConnectionString"),
-                ServerVersion.AutoDetect(Configuration.GetConnectionString("MariaDbConnectionString"))
+                dbConnection,
+                ServerVersion.AutoDetect(dbConnection)
                 )
             );
 
             // Add CORS Policy
-            services.AddCors(o => o.AddPolicy("MyPolicy", builder =>
+            services.AddCors(o => o.AddPolicy(name: MyAllowSpecificOrigins, builder =>
             {
                 builder.AllowAnyOrigin()
                        .AllowAnyMethod()
@@ -85,7 +93,8 @@ namespace LibretaDigitalBackEnd
             }));
 
             // ===== Add Identity ========
-            services.AddIdentity<ApplicationUser, IdentityRole>(options => {
+            services.AddIdentity<ApplicationUser, IdentityRole>(options =>
+            {
                 options.Password.RequireDigit = false;
                 options.Password.RequiredLength = 4;
                 options.Password.RequireLowercase = false;
@@ -124,14 +133,16 @@ namespace LibretaDigitalBackEnd
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-            if (env.IsDevelopment())
-            {
+            //if (env.IsDevelopment())
+            //{
                 app.UseDeveloperExceptionPage();
                 app.UseSwagger();
                 app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "LibretaDigitalBackEnd v1"));
-            }
+            //}
 
-            app.UseHttpsRedirection();
+            //app.UseHttpsRedirection();
+
+            app.UseCors(MyAllowSpecificOrigins);
 
             app.UseRouting();
 
@@ -141,6 +152,21 @@ namespace LibretaDigitalBackEnd
             {
                 endpoints.MapControllers();
             });
+
+            UpdateDatabase(app);
+        }
+
+        private static void UpdateDatabase(IApplicationBuilder app)
+        {
+            using (var serviceScope = app.ApplicationServices
+                .GetRequiredService<IServiceScopeFactory>()
+                .CreateScope())
+            {
+                using (var context = serviceScope.ServiceProvider.GetService<ApplicationDbContext>())
+                {
+                    context.Database.Migrate();
+                }
+            }
         }
     }
 }

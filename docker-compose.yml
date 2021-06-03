@@ -8,6 +8,8 @@ services:
       dockerfile: LibretaDigitalBackEnd/Dockerfile
     links:
       - db
+    environment:
+      DbConnection: "server=db; user id=webapi;password=webapi;database=webapi"
 
   db:
     image: mariadb:10.3.9

@@ -1,6 +1,8 @@
 ﻿using DataAccessLayer;
 using DataAccessLayer.Models;
 using LibretaDigitalBackEnd.Models;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -10,6 +12,7 @@ using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
+using System.Net;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
@@ -147,23 +150,25 @@ namespace LibretaDigitalBackEnd.Controllers
         //    return new JwtSecurityTokenHandler().WriteToken(token);
         //}
 
-        private readonly UserManager<ApplicationUser> userManager;
+        private readonly UserManager<ApplicationUser> _userManager;
         private readonly IConfiguration _configuration;
+        private readonly RoleManager<IdentityRole> _roleManager;
 
-        public AuthenticateController(UserManager<ApplicationUser> userManager, IConfiguration configuration)
+        public AuthenticateController(UserManager<ApplicationUser> userManager, IConfiguration configuration, RoleManager<IdentityRole> rolManager)
         {
-            this.userManager = userManager;
+            _userManager = userManager;
             _configuration = configuration;
+            _roleManager = rolManager;
         }
 
         [HttpPost]
         [Route("login")]
         public async Task<IActionResult> Login([FromBody] LoginModel model)
         {
-            var user = await userManager.FindByNameAsync(model.Username);
-            if (user != null && await userManager.CheckPasswordAsync(user, model.Password))
+            var user = await _userManager.FindByNameAsync(model.Username);
+            if (user != null && await _userManager.CheckPasswordAsync(user, model.Password))
             {
-                var userRoles = await userManager.GetRolesAsync(user);
+                var userRoles = await _userManager.GetRolesAsync(user);
 
                 var authClaims = new List<Claim>
                 {
@@ -199,7 +204,7 @@ namespace LibretaDigitalBackEnd.Controllers
         [Route("register")]
         public async Task<IActionResult> Register([FromBody] RegisterModel model)
         {
-            var userExists = await userManager.FindByNameAsync(model.Username);
+            var userExists = await _userManager.FindByNameAsync(model.Username);
             if (userExists != null)
                 return StatusCode(StatusCodes.Status500InternalServerError, new Response { Status = "Error", Message = "User already exists!" });
 
@@ -209,11 +214,76 @@ namespace LibretaDigitalBackEnd.Controllers
                 SecurityStamp = Guid.NewGuid().ToString(),
                 UserName = model.Username
             };
-            var result = await userManager.CreateAsync(user, model.Password);
+            var result = await _userManager.CreateAsync(user, model.Password);
             if (!result.Succeeded)
                 return StatusCode(StatusCodes.Status500InternalServerError, new Response { Status = "Error", Message = "User creation failed! Please check user details and try again." });
 
             return Ok(new Response { Status = "Success", Message = "User created successfully!" });
+        }
+
+        [HttpGet]
+        [Route("roles")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public IActionResult GetRoles()
+        {
+            List<string> roles = _roleManager.Roles.Select(x => x.Name).ToList();
+            return Ok(roles);
+        }
+
+        [HttpPost]
+        [Route("roles")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public async Task<IActionResult> AddRole([FromBody] Role x)
+        {
+            if (!User.Identity.IsAuthenticated || User.Identity.Name != "admin")
+                throw new UnauthorizedAccessException("Only admin user can access.");
+
+            var result = await _roleManager.CreateAsync(new IdentityRole(x.Nombre));
+
+            if (result.Succeeded)
+                return Ok();
+            else
+                throw new ApplicationException(result.Errors.ToString());
+        }
+
+        [HttpGet]
+        [Route("users")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public IActionResult GetUsers()
+        {
+            if (!User.Identity.IsAuthenticated || User.Identity.Name != "admin")
+                throw new UnauthorizedAccessException("Only admin user can access.");
+
+            List<ApplicationUser> users = _userManager.Users.ToList();
+            return Ok(users);
+        }
+
+        [HttpPost]
+        [Route("users-role")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public async Task<IActionResult> AddRoleToUser([FromBody] AddUserModel x)
+        {
+            if (!User.Identity.IsAuthenticated || User.Identity.Name != "admin")
+                throw new UnauthorizedAccessException("Only admin user can access.");
+
+            var user = await _userManager.FindByNameAsync(x.UserName);
+            var result = await _userManager.AddToRoleAsync(user, x.Role);
+
+            if (result.Succeeded)
+                return Ok();
+            else
+                throw new ApplicationException(result.Errors.ToString());
+        }
+
+        [HttpGet]
+        [Route("users-role")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public async Task<IActionResult> GetUserRoles(string username)
+        {
+            if (!User.Identity.IsAuthenticated || User.Identity.Name != "admin")
+                throw new UnauthorizedAccessException("Only admin user can access.");
+            var user = await _userManager.FindByNameAsync(username);
+            return Ok(await _userManager.GetRolesAsync(user));
         }
     }
 }
