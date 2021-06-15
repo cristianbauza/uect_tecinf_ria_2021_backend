@@ -34,6 +34,18 @@ namespace LibretaDigitalBackEnd.Controllers
                                 .ToListAsync();
         }
 
+        // GET: api/EstudiantesCursos/Estudiante
+        [HttpGet("Estudiante")]
+        public async Task<ActionResult<IEnumerable<EstudiantesCursos>>> GetEstudiantesCursosPorEstudiante(long estudianteId)
+        {
+            return await _context.EstudiantesCursos
+                                .Include(x => x.Estudiante)
+                                .Include(x => x.Curso)
+                                .Include(x => x.Curso.Docente)
+                                .Where(x => x.EstudiantesId == estudianteId)
+                                .ToListAsync();
+        }
+
         // GET: api/EstudiantesCursos/5
         [HttpGet("{id}")]
         public async Task<ActionResult<EstudiantesCursos>> GetEstudiantesCursos(long id)

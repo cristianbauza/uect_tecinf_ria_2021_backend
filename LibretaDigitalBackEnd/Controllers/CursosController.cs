@@ -15,8 +15,7 @@ using LibretaDigitalBackEnd.Models;
 namespace LibretaDigitalBackEnd.Controllers
 {
     [Route("api/[controller]")]
-    [ApiController]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "ADMIN")]
+    [ApiController]    
     public class CursosController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -30,16 +29,35 @@ namespace LibretaDigitalBackEnd.Controllers
 
         // GET: api/Cursos
         [HttpGet]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "ADMIN")]
         public async Task<ActionResult<IEnumerable<Cursos>>> GetCursos()
         {
-            return await _context.Cursos.ToListAsync();
+            return await _context.Cursos
+                                 .Include(x => x.Docente)
+                                 .ToListAsync();
+        }
+
+        // GET: api/Docente
+        [HttpGet("MisCursos")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "DOCENTE, ADMIN")]
+        public async Task<ActionResult<IEnumerable<Cursos>>> GetCursosDocente()
+        {
+            var user = await _userManager.FindByNameAsync(User.Identity.Name);
+            return await _context.Cursos
+                                 .Include(x => x.Docente)
+                                 .Where(x => x.DocenteId == user.Id)                                 
+                                 .ToListAsync();
         }
 
         // GET: api/Cursos/5
         [HttpGet("{id}")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "ADMIN")]
         public async Task<ActionResult<Cursos>> GetCursos(long id)
         {
-            var cursos = await _context.Cursos.FindAsync(id);
+            var cursos = await _context.Cursos
+                                       .Include(x => x.Docente)
+                                       .Where(x => x.Id == id)
+                                       .FirstAsync();
 
             if (cursos == null)
             {
@@ -52,6 +70,7 @@ namespace LibretaDigitalBackEnd.Controllers
         // PUT: api/Cursos/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "ADMIN")]
         public async Task<IActionResult> PutCursos(long id, Cursos cursos)
         {
             if (id != cursos.Id)
@@ -83,6 +102,7 @@ namespace LibretaDigitalBackEnd.Controllers
         // POST: api/Cursos
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "ADMIN")]
         public async Task<ActionResult<Cursos>> PostCursos(CursoDTO cursos)
         {
             ApplicationUser user = (ApplicationUser)await _userManager.FindByIdAsync(cursos.UserId);
@@ -103,6 +123,7 @@ namespace LibretaDigitalBackEnd.Controllers
 
         // DELETE: api/Cursos/5
         [HttpDelete("{id}")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "ADMIN")]
         public async Task<IActionResult> DeleteCursos(long id)
         {
             var cursos = await _context.Cursos.FindAsync(id);
@@ -117,6 +138,7 @@ namespace LibretaDigitalBackEnd.Controllers
             return NoContent();
         }
 
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "ADMIN")]
         private bool CursosExists(long id)
         {
             return _context.Cursos.Any(e => e.Id == id);

@@ -216,7 +216,14 @@ namespace LibretaDigitalBackEnd.Controllers
             };
             var result = await _userManager.CreateAsync(user, model.Password);
             if (!result.Succeeded)
-                return StatusCode(StatusCodes.Status500InternalServerError, new Response { Status = "Error", Message = "User creation failed! Please check user details and try again." });
+            {
+                string error = "";
+                if (result.Errors.ToList().Count() > 0)
+                    error = result.Errors.ToList()[0].Description;
+                if (result.Errors.ToList().Count() > 1)
+                    error += " | " + result.Errors.ToList()[1].Description;
+                return StatusCode(StatusCodes.Status500InternalServerError, new Response { Status = "Error", Message = "User creation failed! Please check user details and try again. " + error });
+            }                
 
             return Ok(new Response { Status = "Success", Message = "User created successfully!" });
         }
@@ -284,6 +291,22 @@ namespace LibretaDigitalBackEnd.Controllers
                 throw new UnauthorizedAccessException("Only admin user can access.");
             var user = await _userManager.FindByNameAsync(username);
             return Ok(await _userManager.GetRolesAsync(user));
+        }
+
+        [HttpGet]
+        [Route("user-info")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public async Task<IActionResult> GetUserInfo()
+        {
+            var user = await _userManager.FindByNameAsync(User.Identity.Name);
+            UserDTO dto = new UserDTO();
+            dto.Id = user.Id;
+            dto.Nombre = user.Nombre;
+            dto.Username = user.UserName;
+            dto.Fotos = user.Foto;
+            dto.Email = user.Email;
+            dto.Roles = ((List<string>)await _userManager.GetRolesAsync(user));
+            return Ok(dto);
         }
     }
 }
